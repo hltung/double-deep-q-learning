@@ -4,13 +4,12 @@ import gym
 from pylab import *
 import numpy as np
 import tensorflow as tf
-from reinforce import Reinforce
-from reinforce_with_baseline import ReinforceWithBaseline
+from dqn import DQN
+from ddqn import DDQN
 
 
 def visualize_data(total_rewards):
     """
-    HELPER - do not edit.
     Takes in array of rewards from each episode, visualizes reward over episodes
 
     :param total_rewards: List of rewards from all episodes
