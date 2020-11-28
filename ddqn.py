@@ -2,6 +2,8 @@ import os
 import gym
 import numpy as np
 import tensorflow as tf
+from replay_memory import ReplayMemory
+
 
 # Killing optional CPU driver warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -24,6 +26,7 @@ class DDQN(tf.keras.Model):
         self.num_actions = num_actions
 
         # TODO: Define network parameters and optimizer
+        self.buffer = ReplayMemory(1000)
 
         lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(0.01, 500, 0.1)
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
