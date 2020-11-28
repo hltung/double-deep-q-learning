@@ -51,12 +51,9 @@ def generate_trajectory(env, model):
     :param model: The model used to generate the actions
     :returns: A tuple of lists (states, actions, rewards), where each list has length equal to the number of timesteps in the episode
     """
-    states = []
-    actions = []
-    rewards = []
     state = env.reset()
     done = False
-
+    
     while not done:
         # TODO:
         # 1) use model to generate probability distribution over next actions
@@ -64,12 +61,10 @@ def generate_trajectory(env, model):
         dist = (model.call(tf.expand_dims(state, axis=0))[0]).numpy()
         dist = dist / np.sum(dist)
         action = np.random.choice(model.num_actions, p=dist)
-        states.append(state)
-        actions.append(action)
+        prev_state = state
         state, rwd, done, _ = env.step(action)
-        rewards.append(rwd)
-
-    return states, actions, rewards
+        model.buffer.push(prev_state, action, state, rwd)
+        train(env, model)
 
 
 def train(env, model):
@@ -84,19 +79,33 @@ def train(env, model):
     :param model: The model
     :returns: The total reward for the episode
     """
+    training_threshold = 1.5 * model.batch_size
 
     # TODO:
     # 1) Use generate trajectory to run an episode and get states, actions, and rewards.
     # 2) Compute discounted rewards.
     # 3) Compute the loss from the model and run backpropagation on the model.
-    with tf.GradientTape() as tape:
-        states, actions, rewards = generate_trajectory(env, model)
-        disc_rewards = discount(rewards)
-        loss_val = model.loss(tf.stack(states), actions, disc_rewards)
-    gradients = tape.gradient(loss_val, model.trainable_variables)
-    model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-    return tf.reduce_sum(rewards)
+    if len(model.buffer) > training_threshold:
+        with tf.GradientTape() as tape:
+            experiences = model.buffer.sample(model.batch_size)
 
+            #check this chunk of code works
+            states = tf.concat([exps[0] for exps in experiences], 0)
+            actions = tf.concat([exps[1] for exps in experiences], 0)
+            next_states = tf.concat([exps[2] for exps in experiences], 0)
+            rewards = tf.concat([tf.convert_to_tensor(exps[3]) for exps in experiences], 0)
+
+            loss_val = model.loss(states, actions, next_states, rewards)
+        gradients = tape.gradient(loss_val, model.trainable_variables)
+        model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+
+def test(env, model):
+    """
+    Test how the model does with 1 game or something
+    
+    :param env: The openai gym environment
+    :param model: The model
+    """
 
 def main():
     env = gym.make("VideoPinball-v0")
@@ -111,11 +120,9 @@ def main():
     # 1) Train your model for 650 episodes, passing in the environment and the agent. 
     # 2) Append the total reward of the episode into a list keeping track of all of the rewards. 
     # 3) After training, print the average of the last 50 rewards you've collected.
-    num_episodes = 650
-    reward_list = np.zeros(num_episodes)
-    for i in range(num_episodes):
-        reward = train(env, model)
-        reward_list[i] = reward
+    num_games = 650
+    for i in range(num_games):
+        generate_trajectory(env, ddqn_model)
     reward_avg = np.sum(reward_list[-50:]) / 50
     print(reward_avg)
     env.close()

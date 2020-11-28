@@ -24,9 +24,11 @@ class DDQN(tf.keras.Model):
         """
         super(DDQN, self).__init__()
         self.num_actions = num_actions
+        self.batch_size = 64
 
         # TODO: Define network parameters and optimizer
         self.buffer = ReplayMemory(1000)
+        
 
         lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(0.01, 500, 0.1)
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
