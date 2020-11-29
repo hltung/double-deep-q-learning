@@ -45,8 +45,6 @@ def generate_trajectory(env, model):
             action = np.randint(0, model.num_actions)            
         else:
             action = tf.reduce_max(self.call(next_states), axis=1)
-        dist = dist / np.sum(dist)
-        action = np.random.choice(model.num_actions, p=dist)
         prev_state = state
         state, rwd, done, _ = env.step(action)
         cumulative_rwd = cumulative_rwd + rwd
