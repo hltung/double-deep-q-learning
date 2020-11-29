@@ -25,23 +25,6 @@ def visualize_data(total_rewards):
     show()
 
 
-def discount(rewards, discount_factor=.99):
-    """
-    Takes in a list of rewards for each timestep in an episode, and
-    returns a list of the discounted rewards for each timestep.
-    Refer to the slides to see how this is done.
-
-    :param rewards: List of rewards from an episode [r_{t1},r_{t2},...]
-    :param discount_factor: Gamma discounting factor to use, defaults to .99
-    :returns: discounted_rewards: list containing the discounted rewards for each timestep in the original rewards list
-    """
-    # TODO: Compute discounted rewards
-    
-    discounted = np.zeros(len(rewards))
-    discounted[-1] = rewards[len(rewards) - 1] 
-    for i in range(len(rewards) - 2, -1, -1):
-        discounted[i] = discounted[i+1] * discount_factor + rewards[i]
-    return tf.convert_to_tensor(discounted, dtype=float32)
 
 def generate_trajectory(env, model):
     """
@@ -53,6 +36,7 @@ def generate_trajectory(env, model):
     """
     state = env.reset()
     done = False
+    cumulative_rwd = 0
     
     while not done:
         # TODO:
@@ -63,8 +47,10 @@ def generate_trajectory(env, model):
         action = np.random.choice(model.num_actions, p=dist)
         prev_state = state
         state, rwd, done, _ = env.step(action)
+        cumulative_rwd = cumulative_rwd + rwd
         model.buffer.push(prev_state, action, state, rwd)
         train(env, model)
+    return cumulative_rwd
 
 
 def train(env, model):
@@ -89,10 +75,10 @@ def train(env, model):
         with tf.GradientTape() as tape:
             experiences = model.buffer.sample(model.batch_size)
 
-            #check this chunk of code works
-            states = tf.concat([exps[0] for exps in experiences], 0)
-            actions = tf.concat([exps[1] for exps in experiences], 0)
-            next_states = tf.concat([exps[2] for exps in experiences], 0)
+            #check this chunk of code works may need to edit lol
+            states = tf.concat([tf.convert_to_tensor(exps[0]) for exps in experiences], 0)
+            actions = tf.concat([tf.convert_to_tensor(exps[1]) for exps in experiences], 0)
+            next_states = tf.concat([tf.convert_to_tensor(exps[2]) for exps in experiences], 0)
             rewards = tf.concat([tf.convert_to_tensor(exps[3]) for exps in experiences], 0)
 
             loss_val = model.loss(states, actions, next_states, rewards)
@@ -106,6 +92,8 @@ def test(env, model):
     :param env: The openai gym environment
     :param model: The model
     """
+    
+    
 
 def main():
     env = gym.make("VideoPinball-v0")
@@ -120,11 +108,16 @@ def main():
     # 1) Train your model for 650 episodes, passing in the environment and the agent. 
     # 2) Append the total reward of the episode into a list keeping track of all of the rewards. 
     # 3) After training, print the average of the last 50 rewards you've collected.
+    
+    
+    
     num_games = 650
     for i in range(num_games):
+        generate_trajectory(env, dqn_model)
         generate_trajectory(env, ddqn_model)
-    reward_avg = np.sum(reward_list[-50:]) / 50
-    print(reward_avg)
+    test(env, dqn_model)
+    test(env, ddqn_model)
+
     env.close()
 
     # TODO: Visualize your rewards.

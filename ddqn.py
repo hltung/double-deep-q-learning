@@ -48,6 +48,10 @@ class DDQN(tf.keras.Model):
         # TODO: implement this ~
         
         pass
+    
+    def eval_q(self, states):
+        
+        pass
 
     def loss(self, states, actions, discounted_rewards):
         """
@@ -61,4 +65,4 @@ class DDQN(tf.keras.Model):
         # TODO: implement this
         # Hint: Use gather_nd to get the probability of each action that was actually taken in the episode.
 
-        pass
+        return tf.reduce_sum(tf.math.square(self.call(states)))
