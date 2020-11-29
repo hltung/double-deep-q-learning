@@ -44,7 +44,7 @@ def generate_trajectory(env, model):
         if np.random.uniform() < model.epsilon:
             action = np.randint(0, model.num_actions)            
         else:
-            action = (model.call(tf.expand_dims(state, axis=0))[0]).numpy()
+            action = tf.reduce_max(self.call(next_states), axis=1)
         dist = dist / np.sum(dist)
         action = np.random.choice(model.num_actions, p=dist)
         prev_state = state
