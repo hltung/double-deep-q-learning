@@ -41,7 +41,7 @@ class DDQN(tf.keras.Model):
         qVals = self.Q(states)
         return qVals
 
-    def q_target(self, states, next_states, rewards, discount_rate=.9):
+    def call_target(self, states, next_states, rewards, discount_rate=.9):
         """
         Performs the forward pass on a batch of states to generate the action probabilities.
         This returns a policy tensor of shape [episode_length, num_actions], where each row is a
@@ -72,5 +72,6 @@ class DDQN(tf.keras.Model):
         # TODO: implement this
         # Hint: Use gather_nd to get the probability of each action that was actually taken in the episode.
         a = tf.stack([tf.range(states.shape[0]), actions], axis=1)
-        qVals = tf.gather_nd(self.q_target(states, next_states, rewards), a)
+        tf.stop_gradient(self.Q_target)
+        qVals = tf.gather_nd(self.call_target(states, next_states, rewards), a)
         return tf.reduce_sum(tf.math.square(qVals - self.call(states)))
