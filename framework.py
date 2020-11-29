@@ -1,28 +1,26 @@
 import os
 import sys
 import gym
-from pylab import *
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from dqn import DQN
 from ddqn import DDQN
 
 
-def visualize_data(total_rewards):
+def visualize_data(dqn_rewards, ddqn_rewards):
     """
     Takes in array of rewards from each episode, visualizes reward over episodes
 
     :param total_rewards: List of rewards from all episodes
     """
-
-    x_values = arange(0, len(total_rewards), 1)
-    y_values = total_rewards
-    plot(x_values, y_values)
-    xlabel('episodes')
-    ylabel('cumulative rewards')
-    title('Reward by Episode')
-    grid(True)
-    show()
+    fig, ax = plt.subplots()
+    x_values = list(range(0, len(dqn_rewards)))
+    ax.plot(x_values, dqn_rewards, label='dqn rewards')
+    ax.plot(x_values, ddqn_rewards, label='ddqn rewards')
+    plt.xlabel('episodes')
+    plt.title('Reward by Episode')
+    plt.show()
 
 
 
@@ -85,16 +83,6 @@ def train(env, model):
         gradients = tape.gradient(loss_val, model.trainable_variables)
         model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
 
-def test(env, model):
-    """
-    Test how the model does with 1 game or something
-    
-    :param env: The openai gym environment
-    :param model: The model
-    """
-    
-    
-
 def main():
     env = gym.make("VideoPinball-v0")
     state_size = env.observation_space.shape[0]
@@ -109,19 +97,20 @@ def main():
     # 2) Append the total reward of the episode into a list keeping track of all of the rewards. 
     # 3) After training, print the average of the last 50 rewards you've collected.
     
-    
-    
+    dqn_rwds = []
+    ddqn_rwds = []
+
     num_games = 650
     for i in range(num_games):
-        generate_trajectory(env, dqn_model)
-        generate_trajectory(env, ddqn_model)
-    test(env, dqn_model)
-    test(env, ddqn_model)
+        dqn_rwd = generate_trajectory(env, dqn_model)
+        dqn_rwds.append(dqn_rwd)
+        ddqn_rwd = generate_trajectory(env, ddqn_model)
+        ddqn_rwds.append(ddqn_rwd)
 
     env.close()
 
     # TODO: Visualize your rewards.
-    visualize_data(reward_list)
+    visualize_data(dqn_rwds, ddqn_rwds)
 
 
 if __name__ == '__main__':
