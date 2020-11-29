@@ -24,6 +24,9 @@ class DQN(tf.keras.Model):
         super(DQN, self).__init__()
         self.num_actions = num_actions
         self.batch_size = 64
+        self.epsilon = 0.7
+        self.epsilon_update = 0.9
+        
 
         # TODO: Define network parameters and optimizer
         
