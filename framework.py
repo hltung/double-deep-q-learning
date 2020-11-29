@@ -40,7 +40,11 @@ def generate_trajectory(env, model):
         # TODO:
         # 1) use model to generate probability distribution over next actions
         # 2) sample from this distribution to pick the next action
-        dist = (model.call(tf.expand_dims(state, axis=0))[0]).numpy()
+        action = 0
+        if np.random.uniform() < model.epsilon:
+            action = np.randint(0, model.num_actions)            
+        else:
+            action = (model.call(tf.expand_dims(state, axis=0))[0]).numpy()
         dist = dist / np.sum(dist)
         action = np.random.choice(model.num_actions, p=dist)
         prev_state = state
@@ -48,6 +52,7 @@ def generate_trajectory(env, model):
         cumulative_rwd = cumulative_rwd + rwd
         model.buffer.push(prev_state, action, state, rwd)
         train(env, model)
+        model.epsilon = model.epsilon * model.epsilon_update
     return cumulative_rwd
 
 
