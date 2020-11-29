@@ -23,6 +23,7 @@ class DQN(tf.keras.Model):
         """
         super(DQN, self).__init__()
         self.num_actions = num_actions
+        self.batch_size = 64
 
         # TODO: Define network parameters and optimizer
         
@@ -31,32 +32,39 @@ class DQN(tf.keras.Model):
         lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(0.01, 500, 0.1)
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
 
+        self.Q = tf.keras.layers.Dense(self.num_actions)
+
 
     def call(self, states):
         """
         Performs the forward pass on a batch of states to generate the action probabilities.
-        This returns a policy tensor of shape [episode_length, num_actions], where each row is a
+        This returns a Q-value tensor of shape [batch_size, num_actions], where each row is a
         probability distribution over actions for each state.
 
-        :param states: An [episode_length, state_size] dimensioned array
+        :param states: An [batch_size, state_size] dimensioned array
         representing the history of states of an episode
-        :return: A [episode_length,num_actions] matrix representing the probability distribution over actions
+        :return: A [batch_size, num_actions] matrix representing the Q-values over actions
         for each state in the episode
         """
         # TODO: implement this ~
-        
-        pass
+        qVals = self.Q(states)
+        return qVals
+        # return tf.argmax(qVals, 1)
 
-    def loss(self, states, actions, discounted_rewards):
+    def loss(self, states, actions, next_states, rewards, discount_rate=.9):
         """
-        Computes the loss for the agent. Make sure to understand the handout clearly when implementing this.
+        Computes the loss for the agent.
 
-        :param states: A batch of states of shape [episode_length, state_size]
-        :param actions: History of actions taken at each timestep of the episode (represented as an [episode_length] array)
-        :param discounted_rewards: Discounted rewards throughout a complete episode (represented as an [episode_length] array)
+        :param states: A batch of states of shape [batch_size, state_size]
+        :param actions: History of actions taken at each timestep of the episode (represented as an [batch_size] array)
+        :param discounted_rewards: Discounted rewards throughout a complete episode (represented as an [batch_size] array)
         :return: loss, a Tensorflow scalar
         """
         # TODO: implement this
-        # Hint: Use gather_nd to get the probability of each action that was actually taken in the episode.
 
-        pass
+        a = tf.stack([tf.range(states.shape[0]), actions], axis=1)
+        qVals = tf.gather_nd(self.call(states), a) # [batch_size] q-values for each action
+        nextVals = tf.reduce_max(self.call(next_states), axis=1) # max of q-values [batch_size, num_actions] across num_actions
+        targetVals = rewards - (discount_rate*nextVals)
+        loss = tf.reduce_sum(tf.square(qVals – targetVals))
+        return loss
