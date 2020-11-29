@@ -66,5 +66,5 @@ class DQN(tf.keras.Model):
         qVals = tf.gather_nd(self.call(states), a) # [batch_size] q-values for each action
         nextVals = tf.reduce_max(self.call(next_states), axis=1) # max of q-values [batch_size, num_actions] across num_actions
         targetVals = rewards - (discount_rate*nextVals)
-        loss = tf.reduce_sum(tf.square(qVals – targetVals))
+        loss = tf.reduce_sum(tf.math.square(qVals – targetVals))
         return loss

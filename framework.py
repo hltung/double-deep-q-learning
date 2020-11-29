@@ -84,6 +84,9 @@ def train(env, model):
 
             loss_val = model.loss(states, actions, next_states, rewards)
         gradients = tape.gradient(loss_val, model.trainable_variables)
+        # no idea if this works
+        if isinstance(model, DDQN):
+            model.Q_target = tf.keras.model.clone(model.Q)
         model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
 
 def main():
