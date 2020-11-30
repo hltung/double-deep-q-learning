@@ -71,7 +71,7 @@ class DDQN(tf.keras.Model):
         """
         # TODO: implement this
         # Hint: Use gather_nd to get the probability of each action that was actually taken in the episode.
-        a = tf.stack([tf.range(states.shape[0]), actions], axis=1)
+        a = tf.stack([tf.range(states.shape[0],dtype=tf.int64), actions], axis=1)
         tf.stop_gradient(self.Q_target)
         qVals = tf.gather_nd(self.call_target(states, next_states, rewards), a)
         return tf.reduce_sum(tf.math.square(qVals - self.call(states)))

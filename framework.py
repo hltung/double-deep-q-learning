@@ -41,13 +41,20 @@ def generate_trajectory(env, model):
         # 1) use model to generate probability distribution over next actions
         # 2) sample from this distribution to pick the next action
         action = 0
+        state = tf.reshape(state, [tf.size(state)])
         if np.random.uniform() < model.epsilon:
-            action = np.randint(0, model.num_actions)            
+            # action = tf.convert_to_tensor(np.random.randint(0, model.num_actions))
+            action = tf.random.uniform(shape=[],minval=0,maxval=model.num_actions,dtype=tf.int64)          
         else:
-            action = tf.reduce_max(self.call(next_states), axis=1)
+            # state appears to be a tensor of dimensions [250, 160, 3]
+            # reshaping for now
+            # tf.reshape(state, [tf.size(state)]
+            q = model.call(tf.expand_dims(state, axis=0))
+            action = tf.math.argmax(tf.squeeze(q))
         prev_state = state
         state, rwd, done, _ = env.step(action)
         cumulative_rwd = cumulative_rwd + rwd
+        state = tf.reshape(state, [tf.size(state)])
         model.buffer.push(prev_state, action, state, rwd)
         train(env, model)
         model.epsilon = model.epsilon * model.epsilon_update
@@ -77,10 +84,10 @@ def train(env, model):
             experiences = model.buffer.sample(model.batch_size)
 
             #check this chunk of code works may need to edit lol
-            states = tf.concat([tf.convert_to_tensor(exps[0]) for exps in experiences], 0)
-            actions = tf.concat([tf.convert_to_tensor(exps[1]) for exps in experiences], 0)
-            next_states = tf.concat([tf.convert_to_tensor(exps[2]) for exps in experiences], 0)
-            rewards = tf.concat([tf.convert_to_tensor(exps[3]) for exps in experiences], 0)
+            states = tf.stack([exps[0] for exps in experiences], 0)
+            actions = tf.stack([exps[1] for exps in experiences], 0)
+            next_states = tf.stack([exps[2] for exps in experiences], 0)
+            rewards = tf.stack([exps[3] for exps in experiences], 0)
 
             loss_val = model.loss(states, actions, next_states, rewards)
         gradients = tape.gradient(loss_val, model.trainable_variables)
