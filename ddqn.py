@@ -53,9 +53,10 @@ class DDQN(tf.keras.Model):
         for each state in the episode
         """
         # TODO: implement this ~
-        fut_actions = tf.argmax(self.Q(next_states))
-        fut_actions_ind = tf.stack([tf.range(next_states.shape[0]), fut_actions], axis=1)
-        q_next = tf.gather_nd(self.Q_target(next_states), fut_actions)
+        fut_actions = tf.dtypes.cast(tf.argmax(self.Q(next_states), 1), tf.int64)
+        fut_actions_ind = tf.stack([tf.range(next_states.shape[0],dtype=tf.int64), fut_actions], axis=1)
+        q_target = tf.stop_gradient(self.Q_target(next_states))
+        q_next = tf.gather_nd(q_target, fut_actions_ind)
         qVals = rewards + discount_rate * q_next
         return qVals
 
@@ -72,6 +73,6 @@ class DDQN(tf.keras.Model):
         # TODO: implement this
         # Hint: Use gather_nd to get the probability of each action that was actually taken in the episode.
         a = tf.stack([tf.range(states.shape[0],dtype=tf.int64), actions], axis=1)
-        tf.stop_gradient(self.Q_target)
-        qVals = tf.gather_nd(self.call_target(states, next_states, rewards), a)
-        return tf.reduce_sum(tf.math.square(qVals - self.call(states)))
+        qVals = self.call_target(states, next_states, rewards)
+        policyQ = tf.gather_nd(self.call(states), a)
+        return tf.reduce_sum(tf.math.square(qVals - policyQ))

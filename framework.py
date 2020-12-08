@@ -92,10 +92,10 @@ def train(env, model):
             loss_val = model.loss(states, actions, next_states, rewards)
         gradients = tape.gradient(loss_val, model.trainable_variables)
         # no idea if this works
-        if isinstance(model, DDQN):
-            model.Q_target = tf.keras.model.clone(model.Q)
         model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-
+        if isinstance(model, DDQN):
+            model.Q_target.set_weights(model.Q.get_weights())
+        
 def main():
     env = gym.make("VideoPinball-v0")
     state_size = env.observation_space.shape[0]
@@ -113,7 +113,7 @@ def main():
     dqn_rwds = []
     ddqn_rwds = []
 
-    num_games = 650
+    num_games = 600
     for i in range(num_games):
         dqn_rwd = generate_trajectory(env, dqn_model)
         dqn_rwds.append(dqn_rwd)
