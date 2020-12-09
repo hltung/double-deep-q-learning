@@ -34,8 +34,14 @@ class DQN(tf.keras.Model):
 
         lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(0.01, 500, 0.1)
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
-
-        self.Q = tf.keras.layers.Dense(self.num_actions)
+        
+        hidden_sz1 = 128
+        hidden_sz2 = 256
+        
+        
+        self.Q_1 = tf.keras.layers.Dense(hidden_sz1)
+        self.Q_2 = tf.keras.layers.Dense(hidden_sz2)
+        self.Q_3 = tf.keras.layers.Dense(self.num_actions)
 
 
     def call(self, states):
@@ -50,7 +56,9 @@ class DQN(tf.keras.Model):
         for each state in the episode
         """
         # TODO: implement this ~
-        qVals = self.Q(states)
+        l1 = tf.nn.relu(self.Q_1(states))
+        l2 = tf.nn.relu(self.Q_2(l1))
+        qVals = self.Q_3(l2)
         return qVals
         # return tf.argmax(qVals, 1)
 
@@ -67,6 +75,6 @@ class DQN(tf.keras.Model):
         a = tf.stack([tf.range(states.shape[0],dtype=tf.int64), actions], axis=1)
         qVals = tf.gather_nd(self.call(states), a) # [batch_size] q-values for each action
         nextVals = tf.reduce_max(self.call(next_states), axis=1) # max of q-values [batch_size, num_actions] across num_actions
-        targetVals = rewards - (discount_rate*nextVals)
+        targetVals = rewards + (discount_rate*nextVals)
         loss = tf.reduce_sum(tf.math.square(qVals - targetVals))
         return loss

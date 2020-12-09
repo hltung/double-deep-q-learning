@@ -14,12 +14,24 @@ def visualize_data(dqn_rewards, ddqn_rewards):
 
     :param total_rewards: List of rewards from all episodes
     """
+    
+    num_steps = dqn_rewards.size
+    num_avging = 50
+    
+    avg_dqn_reward = np.zeros(num_steps - num_avging)
+    #avg_ddqn_reward = np.zeros(num_steps - num_avging)
+    
+    for i in range(num_steps - num_avging):
+        avg_dqn_reward = np.mean(dqn_rewards[i:i+50])
+        #avg_ddqn_reward = np.mean(ddqn_reward[i:i+50])
+    
     fig, ax = plt.subplots()
-    x_values = list(range(2, len(dqn_rewards) + 1))
-    ax.plot(x_values, dqn_rewards[1:], label='dqn rewards')
-    ax.plot(x_values, ddqn_rewards[1:], label='ddqn rewards')
+    x_values = list(range(1, num_steps - num_avging + 1))
+    ax.plot(x_values, avg_dqn_reward, label='dqn rewards')
+    #ax.plot(x_values, avg_ddqn_reward, label='ddqn rewards')
     plt.xlabel('episodes')
     plt.title('Reward by Episode')
+    plt.legend()
     plt.show()
 
 
@@ -32,33 +44,36 @@ def generate_trajectory(env, model):
     :param model: The model used to generate the actions
     :returns: A tuple of lists (states, actions, rewards), where each list has length equal to the number of timesteps in the episode
     """
-    state = env.reset()
-    done = False
-    cumulative_rwd = 0
-    
-    while not done:
-        # TODO:
-        # 1) use model to generate probability distribution over next actions
-        # 2) sample from this distribution to pick the next action
-        action = 0
-        state = tf.reshape(state, [tf.size(state)])
-        if np.random.uniform() < model.epsilon:
-            # action = tf.convert_to_tensor(np.random.randint(0, model.num_actions))
-            action = tf.random.uniform(shape=[],minval=0,maxval=model.num_actions,dtype=tf.int64)          
-        else:
-            # state appears to be a tensor of dimensions [250, 160, 3]
-            # reshaping for now
-            # tf.reshape(state, [tf.size(state)]
-            q = model.call(tf.expand_dims(state, axis=0))
-            action = tf.math.argmax(tf.squeeze(q))
-        prev_state = state
-        state, rwd, done, _ = env.step(action)
-        cumulative_rwd = cumulative_rwd + rwd
-        state = tf.reshape(state, [tf.size(state)])
-        model.buffer.push(prev_state, action, state, rwd)
-        train(env, model)
-        model.epsilon = model.epsilon * model.epsilon_update
-    return cumulative_rwd
+    num_steps = 1000
+    rwd_list = []
+        
+    while len(rwd_list) < num_steps:
+        state = env.reset()
+        done = False
+        
+        while not done or len(rwd_list) < num_steps:
+            # TODO:
+            # 1) use model to generate probability distribution over next actions
+            # 2) sample from this distribution to pick the next action
+            action = 0
+            state = tf.reshape(state, [tf.size(state)])
+            if np.random.uniform() < model.epsilon:
+                # action = tf.convert_to_tensor(np.random.randint(0, model.num_actions))
+                action = tf.random.uniform(shape=[],minval=0,maxval=model.num_actions,dtype=tf.int64)          
+            else:
+                # state appears to be a tensor of dimensions [250, 160, 3]
+                # reshaping for now
+                # tf.reshape(state, [tf.size(state)]
+                q = model.call(tf.expand_dims(state, axis=0))
+                action = tf.math.argmax(tf.squeeze(q))
+            prev_state = state
+            state, rwd, done, _ = env.step(action)
+            rwd_list.append(rwd)
+            state = tf.reshape(state, [tf.size(state)])
+            model.buffer.push(prev_state, action, state, rwd)
+            train(env, model)
+            model.epsilon = model.epsilon * model.epsilon_update
+    return rwd_list
 
 
 def train(env, model):
@@ -113,12 +128,8 @@ def main():
     dqn_rwds = []
     ddqn_rwds = []
 
-    num_games = 10
-    for i in range(num_games):
-        dqn_rwd = generate_trajectory(env, dqn_model)
-        dqn_rwds.append(dqn_rwd)
-        ddqn_rwd = generate_trajectory(env, ddqn_model)
-        ddqn_rwds.append(ddqn_rwd)
+    dqn_rwds = generate_trajectory(env, dqn_model)
+    ddqn_rwds = generate_trajectory(env, ddqn_model) 
 
     env.close()
     
@@ -128,7 +139,7 @@ def main():
     print(ddqn_rwds)
 
     # TODO: Visualize your rewards.
-    visualize_data(dqn_rwds, ddqn_rwds)
+    visualize_data(np.array(dqn_rwds), np.array(ddqn_rwds))
 
 
 if __name__ == '__main__':
