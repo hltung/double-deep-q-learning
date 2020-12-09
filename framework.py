@@ -15,9 +15,9 @@ def visualize_data(dqn_rewards, ddqn_rewards):
     :param total_rewards: List of rewards from all episodes
     """
     fig, ax = plt.subplots()
-    x_values = list(range(0, len(dqn_rewards)))
-    ax.plot(x_values, dqn_rewards, label='dqn rewards')
-    ax.plot(x_values, ddqn_rewards, label='ddqn rewards')
+    x_values = list(range(2, len(dqn_rewards) + 1))
+    ax.plot(x_values, dqn_rewards[1:], label='dqn rewards')
+    ax.plot(x_values, ddqn_rewards[1:], label='ddqn rewards')
     plt.xlabel('episodes')
     plt.title('Reward by Episode')
     plt.show()
@@ -113,7 +113,7 @@ def main():
     dqn_rwds = []
     ddqn_rwds = []
 
-    num_games = 600
+    num_games = 10
     for i in range(num_games):
         dqn_rwd = generate_trajectory(env, dqn_model)
         dqn_rwds.append(dqn_rwd)
@@ -121,6 +121,11 @@ def main():
         ddqn_rwds.append(ddqn_rwd)
 
     env.close()
+    
+    print("DQN rewards")
+    print(dqn_rwds)
+    print("DDQN Rewards")
+    print(ddqn_rwds)
 
     # TODO: Visualize your rewards.
     visualize_data(dqn_rwds, ddqn_rwds)
