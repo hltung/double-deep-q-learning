@@ -23,22 +23,25 @@ class DQN(tf.keras.Model):
         """
         super(DQN, self).__init__()
         self.num_actions = num_actions
-        self.batch_size = 64
-        self.epsilon = 1 #0.7
-        self.epsilon_update = 1 #0.9
+        self.batch_size = 128
+        self.epsilon = 0.7
+        self.epsilon_update = 0.995
         
 
         # TODO: Define network parameters and optimizer
         
         self.buffer = ReplayMemory(100000)
 
-        lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(0.01, 500, 0.1)
+        lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(0.01, 10000, 0.1)
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
         
         hidden_sz1 = 256 
+        hidden_sz2 = 128
         
-        self.Q_1 = tf.keras.layers.Dense(hidden_sz1)
-        self.Q_2 = tf.keras.layers.Dense(self.num_actions)
+        
+        self.Q_1 = tf.keras.layers.Conv2D(hidden_sz1)
+        self.Q_2 = tf.keras.layers.Dense(hidden_sz2)
+        self.Q_3 = tf.keras.layers.Dense(self.num_actions)
 
 
     def call(self, states):
@@ -54,7 +57,8 @@ class DQN(tf.keras.Model):
         """
         # TODO: implement this ~
         l1 = tf.nn.relu(self.Q_1(states))
-        qVals = self.Q_2(l1)
+        l2 = tf.nn.relu(self.Q_2(l1))
+        qVals = self.Q_3(l2)
         return qVals
         # return tf.argmax(qVals, 1)
 
@@ -68,7 +72,8 @@ class DQN(tf.keras.Model):
         :return: loss, a Tensorflow scalar
         """
         # TODO: implement this
-        a = tf.stack([tf.range(states.shape[0],dtype=tf.int32), actions], axis=1)
+        actions = tf.cast(actions, tf.int64)
+        a = tf.stack([tf.range(states.shape[0],dtype=tf.int64), actions], axis=1)
         qVals = tf.gather_nd(self.call(states), a) # [batch_size] q-values for each action
         nextVals = tf.reduce_max(self.call(next_states), axis=1) # max of q-values [batch_size, num_actions] across num_actions
         targetVals = rewards + (discount_rate*nextVals)

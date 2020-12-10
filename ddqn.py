@@ -26,10 +26,10 @@ class DDQN(tf.keras.Model):
         self.num_actions = num_actions
         self.batch_size = 64
         self.epsilon = 0.7
-        self.epsilon_update = 0.9
+        self.epsilon_update = 0.95
 
         # TODO: Define network parameters and optimizer
-        self.buffer = ReplayMemory(100000)
+        self.buffer = ReplayMemory(10000)
 
         lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(0.01, 500, 0.1)
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
@@ -71,7 +71,7 @@ class DDQN(tf.keras.Model):
         """
         # TODO: implement this
         # Hint: Use gather_nd to get the probability of each action that was actually taken in the episode.
-        a = tf.stack([tf.range(states.shape[0],dtype=tf.int64), actions], axis=1)
+        a = tf.stack([tf.range(states.shape[0]), actions], axis=1)
         tf.stop_gradient(self.Q_target)
         qVals = tf.gather_nd(self.call_target(states, next_states, rewards), a)
         return tf.reduce_sum(tf.math.square(qVals - self.call(states)))
