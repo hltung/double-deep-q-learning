@@ -22,8 +22,8 @@ def visualize_data(dqn_rewards, ddqn_rewards):
     #avg_ddqn_reward = np.zeros(num_steps - num_avging)
     
     for i in range(num_steps - num_avging):
-        avg_dqn_reward = np.mean(dqn_rewards[i:i+50])
-        #avg_ddqn_reward = np.mean(ddqn_reward[i:i+50])
+        avg_dqn_reward[i] = np.mean(dqn_rewards[i:i+50])
+        #avg_ddqn_reward[i] = np.mean(ddqn_reward[i:i+50])
     
     fig, ax = plt.subplots()
     x_values = list(range(1, num_steps - num_avging + 1))
@@ -44,12 +44,13 @@ def generate_trajectory(env, model):
     :param model: The model used to generate the actions
     :returns: A tuple of lists (states, actions, rewards), where each list has length equal to the number of timesteps in the episode
     """
-    num_steps = 1000
+    num_steps = 5000
     rwd_list = []
         
     while len(rwd_list) < num_steps:
         state = env.reset()
         done = False
+        print('new game, step:', len(rwd_list))
         
         while not done or len(rwd_list) < num_steps:
             # TODO:
@@ -59,13 +60,13 @@ def generate_trajectory(env, model):
             state = tf.reshape(state, [tf.size(state)])
             if np.random.uniform() < model.epsilon:
                 # action = tf.convert_to_tensor(np.random.randint(0, model.num_actions))
-                action = tf.random.uniform(shape=[],minval=0,maxval=model.num_actions,dtype=tf.int64)          
+                action = env.action_space.sample()          
             else:
                 # state appears to be a tensor of dimensions [250, 160, 3]
                 # reshaping for now
                 # tf.reshape(state, [tf.size(state)]
                 q = model.call(tf.expand_dims(state, axis=0))
-                action = tf.math.argmax(tf.squeeze(q))
+                action = tf.math.argmax(tf.squeeze(q)).numpy()
             prev_state = state
             state, rwd, done, _ = env.step(action)
             rwd_list.append(rwd)
@@ -73,6 +74,7 @@ def generate_trajectory(env, model):
             model.buffer.push(prev_state, action, state, rwd)
             train(env, model)
             model.epsilon = model.epsilon * model.epsilon_update
+        env.reset()
     return rwd_list
 
 
@@ -88,7 +90,7 @@ def train(env, model):
     :param model: The model
     :returns: The total reward for the episode
     """
-    training_threshold = 1.5 * model.batch_size
+    training_threshold = model.batch_size
 
     # TODO:
     # 1) Use generate trajectory to run an episode and get states, actions, and rewards.
@@ -112,31 +114,32 @@ def train(env, model):
             model.Q_target.set_weights(model.Q.get_weights())
         
 def main():
-    env = gym.make("VideoPinball-v0")
+    env = gym.make("SpaceInvaders-ram-v0")
     state_size = env.observation_space.shape[0]
     num_actions = env.action_space.n
 
     # Initialize model
     dqn_model = DQN(state_size, num_actions) 
-    ddqn_model = DDQN(state_size, num_actions)
+    #ddqn_model = DDQN(state_size, num_actions)
 
     # TODO: 
     # 1) Train your model for 650 episodes, passing in the environment and the agent. 
     # 2) Append the total reward of the episode into a list keeping track of all of the rewards. 
     # 3) After training, print the average of the last 50 rewards you've collected.
     
-    dqn_rwds = []
     ddqn_rwds = []
-
+    
+    print('start train')
+    
     dqn_rwds = generate_trajectory(env, dqn_model)
-    ddqn_rwds = generate_trajectory(env, ddqn_model) 
+    #ddqn_rwds = generate_trajectory(env, ddqn_model) 
 
     env.close()
     
     print("DQN rewards")
     print(dqn_rwds)
     print("DDQN Rewards")
-    print(ddqn_rwds)
+    #print(ddqn_rwds)
 
     # TODO: Visualize your rewards.
     visualize_data(np.array(dqn_rwds), np.array(ddqn_rwds))

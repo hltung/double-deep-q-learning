@@ -29,7 +29,7 @@ class DDQN(tf.keras.Model):
         self.epsilon_update = 0.9
 
         # TODO: Define network parameters and optimizer
-        self.buffer = ReplayMemory(1000)
+        self.buffer = ReplayMemory(100000)
 
         lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(0.01, 500, 0.1)
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
