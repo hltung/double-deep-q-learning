@@ -71,6 +71,7 @@ def train(env, model):
     :returns: The total reward for the episode
     """
     training_threshold = model.batch_size
+    tau = 0.9
 
     # TODO:
     # 1) Use generate trajectory to run an episode and get states, actions, and rewards.
@@ -87,11 +88,17 @@ def train(env, model):
             rewards = tf.stack([exps[3] for exps in experiences], 0)
 
             loss_val = model.loss(states, actions, next_states, rewards)
-        gradients = tape.gradient(loss_val, model.trainable_variables)
+        
         # no idea if this works
-        if isinstance(model, DDQN):
-            model.Q_target = tf.keras.model.clone(model.Q)
+        gradients = tape.gradient(loss_val, model.trainable_variables)
         model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+        if isinstance(model, DDQN):    
+            # model.optimizer.apply_gradients(tape.gradient(loss_val,model.Q_1),model.Q_1)
+            # model.optimizer.apply_gradients(tape.gradient(loss_val,model.Q_2),model.Q_2)
+            # model.optimizer.apply_gradients(tape.gradient(loss_val,model.Q_3),model.Q_3)
+            model.Q1_target.set_weights(model.Q_1.get_weights())
+            model.Q2_target.set_weights(model.Q_2.get_weights())
+            model.Q3_target.set_weights(model.Q_3.get_weights())
 
 def main():
     env = gym.make("SpaceInvaders-ram-v0")
@@ -117,17 +124,17 @@ def main():
         if i%10 == 0:
             print('step:', i)
             print(dqn_model.epsilon)
+        ddqn_rwd = generate_trajectory(env, ddqn_model)
+        ddqn_rwds.append(ddqn_rwd)
         dqn_rwd = generate_trajectory(env, dqn_model)
         dqn_rwds.append(dqn_rwd)
-        #ddqn_rwd = generate_trajectory(env, ddqn_model)
-        #ddqn_rwds.append(ddqn_rwd)
-
+        
     env.close()
     
     print("DQN rewards")
     print(dqn_rwds)
     print("DDQN Rewards")
-    #print(ddqn_rwds)
+    print(ddqn_rwds)
 
     # TODO: Visualize your rewards.
     visualize_data(np.array(dqn_rwds), np.array(ddqn_rwds))

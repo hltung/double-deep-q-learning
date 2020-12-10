@@ -24,24 +24,41 @@ class DDQN(tf.keras.Model):
         """
         super(DDQN, self).__init__()
         self.num_actions = num_actions
-        self.batch_size = 64
+        self.batch_size = 128
         self.epsilon = 0.7
-        self.epsilon_update = 0.95
+        self.epsilon_update = 0.995
+        self.tau = 0.9
 
         # TODO: Define network parameters and optimizer
-        self.buffer = ReplayMemory(10000)
+        self.buffer = ReplayMemory(100000)
 
-        lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(0.01, 500, 0.1)
+        lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(0.01, 10000, 0.1)
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
         
-        self.Q = tf.keras.layers.Dense(self.num_actions)
-        self.Q_target = tf.keras.layers.Dense(self.num_actions)
+        hidden_sz1 = 256 
+        hidden_sz2 = 128
+        
+        self.Q_1 = tf.keras.layers.Dense(hidden_sz1)
+        self.Q_2 = tf.keras.layers.Dense(hidden_sz2)
+        self.Q_3 = tf.keras.layers.Dense(self.num_actions)
+        
+        self.Q1_target = tf.keras.layers.Dense(hidden_sz1, trainable=False)
+        self.Q2_target = tf.keras.layers.Dense(hidden_sz2, trainable=False)
+        self.Q3_target = tf.keras.layers.Dense(self.num_actions, trainable=False)
     
     def call(self, states):
-        qVals = self.Q(states)
+        l1 = tf.nn.relu(self.Q_1(states))
+        l2 = tf.nn.relu(self.Q_2(l1))
+        qVals = self.Q_3(l2)
+        return qVals
+    
+    def call_target(self, states):
+        l1 = tf.nn.relu(self.Q1_target(states))
+        l2 = tf.nn.relu(self.Q2_target(l1))
+        qVals = self.Q3_target(l2)
         return qVals
 
-    def call_target(self, states, next_states, rewards, discount_rate=.9):
+    def get_qVals(self, states, next_states, rewards, discount_rate=.9):
         """
         Performs the forward pass on a batch of states to generate the action probabilities.
         This returns a policy tensor of shape [episode_length, num_actions], where each row is a
@@ -53,9 +70,11 @@ class DDQN(tf.keras.Model):
         for each state in the episode
         """
         # TODO: implement this ~
-        fut_actions = tf.argmax(self.Q(next_states))
-        fut_actions_ind = tf.stack([tf.range(next_states.shape[0]), fut_actions], axis=1)
-        q_next = tf.gather_nd(self.Q_target(next_states), fut_actions)
+        
+        fut_actions = tf.dtypes.cast(tf.argmax(self.call(next_states), 1), tf.int64)
+        fut_actions_ind = tf.stack([tf.range(next_states.shape[0],dtype=tf.int64), fut_actions], axis=1)
+        q_target = tf.stop_gradient(self.call_target(next_states))
+        q_next = tf.gather_nd(q_target, fut_actions_ind)
         qVals = rewards + discount_rate * q_next
         return qVals
 
@@ -71,7 +90,9 @@ class DDQN(tf.keras.Model):
         """
         # TODO: implement this
         # Hint: Use gather_nd to get the probability of each action that was actually taken in the episode.
-        a = tf.stack([tf.range(states.shape[0]), actions], axis=1)
-        tf.stop_gradient(self.Q_target)
-        qVals = tf.gather_nd(self.call_target(states, next_states, rewards), a)
-        return tf.reduce_sum(tf.math.square(qVals - self.call(states)))
+        actions = tf.cast(actions, tf.int64)
+        a = tf.stack([tf.range(states.shape[0],dtype=tf.int64), actions], axis=1)
+        qVals = self.get_qVals(states, next_states, rewards)
+        policyQ = tf.gather_nd(self.call(states), a)
+        return tf.reduce_sum(tf.math.square(qVals - policyQ))
+        

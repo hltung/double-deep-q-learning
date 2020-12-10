@@ -38,8 +38,7 @@ class DQN(tf.keras.Model):
         hidden_sz1 = 256 
         hidden_sz2 = 128
         
-        
-        self.Q_1 = tf.keras.layers.Conv2D(hidden_sz1)
+        self.Q_1 = tf.keras.layers.Dense(hidden_sz1)
         self.Q_2 = tf.keras.layers.Dense(hidden_sz2)
         self.Q_3 = tf.keras.layers.Dense(self.num_actions)
 
