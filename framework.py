@@ -109,10 +109,10 @@ def train(env, model):
             loss_val = model.loss(states, actions, next_states, rewards)
         gradients = tape.gradient(loss_val, model.trainable_variables)
         # no idea if this works
-        model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
         if isinstance(model, DDQN):
-            model.Q_target.set_weights(model.Q.get_weights())
-        
+            model.Q_target = tf.keras.model.clone(model.Q)
+        model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+
 def main():
     env = gym.make("SpaceInvaders-ram-v0")
     state_size = env.observation_space.shape[0]
@@ -120,19 +120,24 @@ def main():
 
     # Initialize model
     dqn_model = DQN(state_size, num_actions) 
-    #ddqn_model = DDQN(state_size, num_actions)
+    ddqn_model = DDQN(state_size, num_actions)
 
     # TODO: 
     # 1) Train your model for 650 episodes, passing in the environment and the agent. 
     # 2) Append the total reward of the episode into a list keeping track of all of the rewards. 
     # 3) After training, print the average of the last 50 rewards you've collected.
     
+    dqn_rwds = []
     ddqn_rwds = []
     
     print('start train')
-    
-    dqn_rwds = generate_trajectory(env, dqn_model)
-    #ddqn_rwds = generate_trajectory(env, ddqn_model) 
+
+    num_games = 650
+    for i in range(num_games):
+        dqn_rwd = generate_trajectory(env, dqn_model)
+        dqn_rwds.append(dqn_rwd)
+        ddqn_rwd = generate_trajectory(env, ddqn_model)
+        ddqn_rwds.append(ddqn_rwd)
 
     env.close()
     
