@@ -25,14 +25,15 @@ class DQN(tf.keras.Model):
         self.num_actions = num_actions
         self.batch_size = 128
         self.epsilon = 0.7
+        self.min_epsilon = 0.05
         self.epsilon_update = 0.995
         
 
         # TODO: Define network parameters and optimizer
         
-        self.buffer = ReplayMemory(100000)
+        self.buffer = ReplayMemory(10000)
 
-        lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(0.01, 10000, 0.1)
+        lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(0.01, 9000, 0.1)
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
         
         hidden_sz1 = 256 

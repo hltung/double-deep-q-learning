@@ -26,13 +26,13 @@ class DDQN(tf.keras.Model):
         self.num_actions = num_actions
         self.batch_size = 128
         self.epsilon = 0.7
+        self.min_epsilon = 0.05
         self.epsilon_update = 0.995
-        self.tau = 0.9
-
+        
         # TODO: Define network parameters and optimizer
-        self.buffer = ReplayMemory(100000)
+        self.buffer = ReplayMemory(10000)
 
-        lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(0.01, 10000, 0.1)
+        lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(0.01, 9000, 0.1)
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
         
         hidden_sz1 = 256 
@@ -42,9 +42,12 @@ class DDQN(tf.keras.Model):
         self.Q_2 = tf.keras.layers.Dense(hidden_sz2)
         self.Q_3 = tf.keras.layers.Dense(self.num_actions)
         
-        self.Q1_target = tf.keras.layers.Dense(hidden_sz1, trainable=False)
-        self.Q2_target = tf.keras.layers.Dense(hidden_sz2, trainable=False)
-        self.Q3_target = tf.keras.layers.Dense(self.num_actions, trainable=False)
+        self.Q1_target = tf.keras.layers.Dense(hidden_sz1)
+        self.Q1_target.trainable = False
+        self.Q2_target = tf.keras.layers.Dense(hidden_sz2)
+        self.Q2_target.trainable = False
+        self.Q3_target = tf.keras.layers.Dense(self.num_actions)
+        self.Q3_target.trainable = False
     
     def call(self, states):
         l1 = tf.nn.relu(self.Q_1(states))

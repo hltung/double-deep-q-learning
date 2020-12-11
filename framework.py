@@ -18,9 +18,9 @@ def visualize_data(dqn_rewards, ddqn_rewards):
     fig, ax = plt.subplots()
     x_values = list(range(1, dqn_rewards.size + 1))
     ax.plot(x_values, dqn_rewards, label='dqn rewards')
-    #ax.plot(x_values, avg_ddqn_reward, label='ddqn rewards')
+    ax.plot(x_values, ddqn_rewards, label='ddqn rewards')
     plt.xlabel('episodes')
-    plt.title('Reward by Episode')
+    plt.title('Cumulative Reward per Game')
     plt.legend()
     plt.show()
 
@@ -38,6 +38,7 @@ def generate_trajectory(env, model):
     state = env.reset()
     done = False
     cumulative_rwd = 0
+    ctr = 0
     
     while not done:
         # TODO:
@@ -53,12 +54,12 @@ def generate_trajectory(env, model):
         state, rwd, done, _ = env.step(action)
         cumulative_rwd = cumulative_rwd + rwd
         model.buffer.push(prev_state, action, state, rwd)
-        train(env, model)
-        model.epsilon = model.epsilon * model.epsilon_update
+        train(env, model, ctr)
+        model.epsilon = (model.epsilon - model.min_epsilon) * model.epsilon_update + model.min_epsilon
     return cumulative_rwd
 
 
-def train(env, model):
+def train(env, model, ctr):
     """
     This function should train your model for one episode.
     Each call to this function should generate a complete trajectory for one
@@ -92,16 +93,13 @@ def train(env, model):
         # no idea if this works
         gradients = tape.gradient(loss_val, model.trainable_variables)
         model.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-        if isinstance(model, DDQN):    
-            # model.optimizer.apply_gradients(tape.gradient(loss_val,model.Q_1),model.Q_1)
-            # model.optimizer.apply_gradients(tape.gradient(loss_val,model.Q_2),model.Q_2)
-            # model.optimizer.apply_gradients(tape.gradient(loss_val,model.Q_3),model.Q_3)
+        if isinstance(model, DDQN) and ctr % 3 == 0:    
             model.Q1_target.set_weights(model.Q_1.get_weights())
             model.Q2_target.set_weights(model.Q_2.get_weights())
             model.Q3_target.set_weights(model.Q_3.get_weights())
-
+            
 def main():
-    env = gym.make("SpaceInvaders-ram-v0")
+    env = gym.make("VideoPinball-ram-v0")
     state_size = env.observation_space.shape[0]
     num_actions = env.action_space.n
 
@@ -119,11 +117,10 @@ def main():
     
     print('start train')
 
-    num_games = 600
+    num_games = 100
     for i in range(num_games):
         if i%10 == 0:
             print('step:', i)
-            print(dqn_model.epsilon)
         ddqn_rwd = generate_trajectory(env, ddqn_model)
         ddqn_rwds.append(ddqn_rwd)
         dqn_rwd = generate_trajectory(env, dqn_model)
